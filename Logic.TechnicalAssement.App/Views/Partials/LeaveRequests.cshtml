@@ -288,6 +288,14 @@
                 errors.push('End date must be equal to or greater than start date.');
             }
 
+            if (startDate === "") {
+                errors.push('Start date cannot be empty.');
+            }
+
+            if (endDate === "") {
+                errors.push('End date cannot be empty.');
+            }
+
             // Validate that if half day is checked then start date and end date must be the same
             var isHalfDayChecked = $('#isHalfDay').is(':checked');
             if (isHalfDayChecked && startDate !== endDate) {
