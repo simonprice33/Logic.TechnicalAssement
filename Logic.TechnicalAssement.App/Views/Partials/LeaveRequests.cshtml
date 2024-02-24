@@ -1,0 +1,302 @@
+﻿@using Logic.TechnicalAssement.Core.Extensions
+@model IEnumerable<Logic.TechnicalAssement.Core.Models.LeaveViewModel>
+
+<div class="container">
+    <div class="row">
+        <div class="col-12 col-sm-12 col-md-12 col-lg-12 mb-3">
+            <button id="btnAddRow" class="btn btn-secondary" type="button">Add Row</button>
+
+        </div>
+        <div class="col-12 col-sm-12 col-md-12 col-lg-12">
+            <table id="leave" class="table table-bordered">
+                <thead>
+                    <tr class="text-center">
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Email Address</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Is Half Day</th>
+                        <th>Leave Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="requestBody">
+                    @foreach (var request in Model)
+                    {
+                        <tr data-id="@request.Id">
+                            <td>@request.FirstName</td>
+                            <td>@request.LastName</td>
+                            <td>@request.Email</td>
+                            <td class="text-center">@request.StartDate.ToString("dd-MM-yyyy")</td>
+                            <td class="text-center">@request.EndDate.ToString("dd-MM-yyyy")</td>
+                            <td class="text-center">
+                                @if (!@request.IsHalfDay)
+                                {
+                                    <i class="fas fa-times"></i>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-check"></i>
+                                }
+
+                            </td>
+                            <td>@request.LeaveType.GetDescription()</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteRow(this)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr id="noDataRow"><td colspan="8" class="text-center">No content available</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Leave Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @await Html.PartialAsync("../Partials/RequestForm", null)
+            </div>
+            <div class="modal-footer">
+                <div id="message" class="col-12"></div>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="btnSave" class="btn btn-primary">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var selectedRecordId = 0;
+    var selectedRow = null;
+    $("#leave tbody").on("click", "tr", function () {
+        var currentRow = $(this);
+        selectedRow = $(this);
+        selectedRecordId = currentRow.data('id');
+        $('#firstName').val(currentRow.find("td:eq(0)").text().trim());
+        $('#lastName').val(currentRow.find("td:eq(1)").text().trim());
+        $('#email').val(currentRow.find("td:eq(2)").text().trim());
+        $('#startDate').val(currentRow.find("td:eq(3)").text().trim());
+        $('#endDate').val(currentRow.find("td:eq(4)").text().trim());
+
+        var isChecked = currentRow.find("td:eq(5) i.fa-check").length > 0;
+        $('#isHalfDay').prop('checked', isChecked);
+        console.log("Record Id : " + selectedRecordId)
+        $('#editModal').modal('show');
+    });
+
+    function deleteRow(button) {
+        // Find the row containing the clicked button
+        var row = $(button).closest('tr');
+        var id = row.data('id')
+
+        if (id === 0) {
+            row.remove();
+            return;
+        }
+
+        var url = `/leave/${id}`
+        var encodedUrl = encodeURI(url);
+        $.ajax({
+            url: encodedUrl,
+            type: 'DELETE',
+            success: function (data) {
+                // Remove the row from the table
+                row.remove();
+                updateNoDataRow();
+            },
+            error: function (xhr, status, error) {
+                console.error("Error: " + error);
+            }
+        });
+    }
+
+    function updateNoDataRow() {
+        var dataRowCount = $("#leave tbody tr").not("#noDataRow").length;
+
+        var noDataRowExists = $("#noDataRow").length > 0;
+
+        if (dataRowCount === 0 && !noDataRowExists) {
+            $("#leave tbody").append('<tr id="noDataRow"><td colspan="8" class="text-center">No content available</td></tr>');
+        } else if (dataRowCount > 0 && noDataRowExists) {
+            $("#noDataRow").remove();
+        }
+    }
+
+    $(document).ready(function () {
+
+        $('#leave').on('click', '.btn-danger', function (event) {
+            event.stopPropagation(); // Prevent click event from bubbling up to the row
+            deleteRow(this); // Call your deleteRow function
+        });
+
+        $("#btnAddRow").on("click", function () {
+
+            $('#editModal').modal('show');
+        });
+
+        $("#btnSave").on("click", function () {
+
+            $('#message').hide();
+            // Validate input
+            var errors = validateLeaveRequest();
+            console.log(errors)
+            if (errors.length > 0) {
+
+                var html = '<div id="successAlert" class="col-12 col-sm-12 col-md-12 col-lg-12 alert alert-danger ">'
+                html += '<ul>'
+                errors.forEach(function (error) {
+                    html += '<li>' + error + '</li>'
+                })
+                html += '</ul>'
+                html += '</div>'
+                $('#message').html(html)
+                $('#message').slideDown();
+                return;
+            }
+
+            var isHalfDayChecked = $('#isHalfDay').is(':checked');
+            var halfDayIcon = isHalfDayChecked ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>';
+
+            var json = {
+                "firstName": $('#firstName').val(),
+                "lastName": $('#lastName').val(),
+                "startDate": $('#startDate').val(),
+                "endDate": $('#endDate').val(),
+                "email": $('#email').val(),
+                "isHalfDay": isHalfDayChecked,
+                "leaveType": $('#leaveType').val(),
+            }
+            var verb = "POST";
+            var path = "/leave/"
+            if (selectedRecordId > 0) {
+                json["id"] = selectedRecordId;
+                verb = "PUT"
+                path = "/leave/" + selectedRecordId + "/update"
+            }
+
+            $.ajax({
+                type: verb,
+                url: path,
+                data: JSON.stringify(json),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (result) {
+                    console.log(result);
+                    $("#noDataRow").remove();
+                    // Add new row
+                    if (verb === "POST") {
+                        var newRowHtml = '<tr data-id="' + result + '">' +
+                            '<td>' + $('#firstName').val() + '</td>' +
+                            '<td>' + $('#lastName').val() + '</td>' +
+                            '<td>' + $('#email').val() + '</td>' +
+                            '<td class="text-center">' + $('#startDate').val() + '</td>' +
+                            '<td class="text-center">' + $('#endDate').val() + '</td>' +
+                            '<td class="text-center">' + halfDayIcon + '</td>' +
+                            '<td>' + $('#leaveType').val() + '</td>' +
+                            '<td class="text-center"><button type="button" class="btn btn-danger delete-btn" onclick="event.stopPropagation(); deleteRow(this);"><i class="fas fa-trash"></i></button></td>' +
+
+                            '</tr>';
+
+                        $('#leave tbody').append(newRowHtml);
+                    }
+
+                    if (verb === "PUT") {
+
+                        selectedRow.find("td:eq(3)").text($('#startDate').val());
+                        selectedRow.find("td:eq(4)").text($('#endDate').val());
+                        selectedRow.find("td:eq(5)").html(halfDayIcon);
+                        selectedRow.find("td:eq(6)").text($('#leaveType').val());
+                    }
+                    $('#editModal').modal('hide');
+                },
+                error: function (xhr, status, error) {
+                    if (xhr.status === 400) {
+                        var errors = JSON.parse(xhr.responseText);
+                        console.log("Errors:", errors);
+
+                        var html = '<div id="errorAlert" class="alert alert-danger">';
+                        html += '<ul>';
+                        errors.forEach(function (error) {
+                            html += '<li>' + error.propertyName + ': ' + error.errorMessage + '</li>';
+                        });
+                        html += '</ul>';
+                        html += '</div>';
+
+                        // Display the error messages
+                        $('#message').html(html);
+                        $('#message').slideDown();
+                    } else {
+                        // Handle other types of errors with a generic message
+                        var html = '<div id="errorAlert" class="alert alert-danger">' +
+                            'Something went wrong. Please try again later.' +
+                            '</div>';
+
+                        // Display the generic error message
+                        $('#message').html(html);
+                        $('#message').slideDown();
+                    }
+                }
+
+            });
+        })
+
+        $('#editModal').on('hide.bs.modal', function () {
+            $(this).find('input[type="text"], input[type="email"], input[type="date"], input[type="checkbox"]').val('');
+            $(this).find('input[type="checkbox"]').prop('checked', false);
+            selectedRecordId = 0;
+            selectedRow = null;
+        });
+
+        function validateLeaveRequest() {
+            var errors = []; // Array to hold validation errors
+
+            // Validate first and last names are not empty
+            var firstName = $('#firstName').val();
+            var lastName = $('#lastName').val();
+            if (firstName.trim() === '') {
+                errors.push('First name cannot be empty.');
+            }
+            if (lastName.trim() === '') {
+                errors.push('Last name cannot be empty.');
+            }
+
+            // Validate email format
+            var email = $('#email').val();
+            var emailRegex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/; // Simple email regex pattern
+            if (!emailRegex.test(email)) {
+                errors.push('Email is not valid.');
+            }
+
+            // Validate end date is equal to or greater than start date
+            var startDate = $('#startDate').val();
+            var endDate = $('#endDate').val();
+            if (new Date(startDate) > new Date(endDate)) {
+                errors.push('End date must be equal to or greater than start date.');
+            }
+
+            // Validate that if half day is checked then start date and end date must be the same
+            var isHalfDayChecked = $('#isHalfDay').is(':checked');
+            if (isHalfDayChecked && startDate !== endDate) {
+                errors.push('For a half day, start date and end date must be the same.');
+            }
+
+            return errors; // Return the array of errors
+        }
+
+
+    });
+</script>

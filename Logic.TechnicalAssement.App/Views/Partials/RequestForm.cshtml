@@ -1,0 +1,47 @@
+﻿@using Logic.TechnicalAssement.Core.Enums
+@using Logic.TechnicalAssement.Core.Extensions
+
+<div class="container">
+    <div class="mb-3">
+        <label for="leaveType" class="form-label">Leave Type</label>
+        <select id="leaveType" name="LeaveType" class="form-select">
+            @foreach (LeaveType type in Enum.GetValues(typeof(Logic.TechnicalAssement.Core.Enums.LeaveType)))
+            {
+                var friendlyName = @type.GetDescription();
+                <option value="@type">@friendlyName</option>
+            }
+        </select>
+    </div>
+
+    <div class="d-flex flex-wrap">
+        <div class="mb-3 me-2 flex-fill">
+            <label for="firstName" class="form-label">First Name</label>
+            <input type="text" class="form-control" id="firstName" name="FirstName">
+        </div>
+        <div class="mb-3 flex-fill">
+            <label for="lastName" class="form-label">Last Name</label>
+            <input type="text" class="form-control" id="lastName" name="LastName">
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="email" name="Email">
+    </div>
+
+    <div class="d-flex flex-wrap">
+        <div class="mb-3 me-2 flex-fill">
+            <label for="startDate" class="form-label">Start Date</label>
+            <input type="date" class="form-control" id="startDate" name="StartDate">
+        </div>
+        <div class="mb-3 flex-fill">
+            <label for="endDate" class="form-label">End Date</label>
+            <input type="date" class="form-control" id="endDate" name="EndDate">
+        </div>
+    </div>
+
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="isHalfDay" name="IsHalfDay">
+        <label class="form-check-label" for="isHalfDay">Is Half Day</label>
+    </div>
+</div>
