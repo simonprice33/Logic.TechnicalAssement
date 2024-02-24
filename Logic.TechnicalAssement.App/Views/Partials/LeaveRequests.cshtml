@@ -259,6 +259,7 @@
             $(this).find('input[type="checkbox"]').prop('checked', false);
             selectedRecordId = 0;
             selectedRow = null;
+            $('#message').html("");
         });
 
         function validateLeaveRequest() {
@@ -288,6 +289,12 @@
                 errors.push('End date must be equal to or greater than start date.');
             }
 
+            // Validate that if half day is checked then start date and end date must be the same
+            var isHalfDayChecked = $('#isHalfDay').is(':checked');
+            if (isHalfDayChecked && startDate !== endDate) {
+                errors.push('For a half day, start date and end date must be the same.');
+            }
+
             if (startDate === "") {
                 errors.push('Start date cannot be empty.');
             }
@@ -296,11 +303,7 @@
                 errors.push('End date cannot be empty.');
             }
 
-            // Validate that if half day is checked then start date and end date must be the same
-            var isHalfDayChecked = $('#isHalfDay').is(':checked');
-            if (isHalfDayChecked && startDate !== endDate) {
-                errors.push('For a half day, start date and end date must be the same.');
-            }
+            
 
             return errors; // Return the array of errors
         }
